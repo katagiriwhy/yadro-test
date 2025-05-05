@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"yadro-test/config"
-	"yadro-test/internal"
+	"yadro-test/utils"
 )
 
 func main() {
@@ -12,9 +12,11 @@ func main() {
 		fmt.Printf("Error parsing config: %s\n", err)
 	}
 	fmt.Println(*cfg)
-	events, err := internal.LoadEvents("files/events")
-	if err != nil {
-		fmt.Printf("Error loading events: %s\n", err)
-	}
-	fmt.Println(events)
+	//events, err := internal.LoadEvents("files/events")
+	//if err != nil {
+	//	fmt.Printf("Error loading events: %s\n", err)
+	//}
+
+	duration, err := utils.ParseDuration("15:04:05.012")
+	fmt.Println(duration)
 }
