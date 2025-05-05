@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	competition2 "yadro-test/competition"
 	"yadro-test/config"
-	"yadro-test/internal"
+	events2 "yadro-test/events"
 
 	"github.com/joho/godotenv"
 )
@@ -19,12 +20,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error parsing config.json: %s", err)
 	}
-	events, err := internal.LoadEvents(os.Getenv("EVENTS_PATH"))
+	events, err := events2.LoadEvents(os.Getenv("EVENTS_PATH"))
 	if err != nil {
 		log.Fatalf("Error loading events: %s", err)
 	}
 
-	competition, err := config.CreateCompetition(cfg)
+	competition, err := competition2.CreateCompetition(cfg)
 	if err != nil {
 		log.Fatalf("Error creating competition: %s", err)
 	}
@@ -36,4 +37,5 @@ func main() {
 
 	fmt.Println("`Resulting table`")
 	fmt.Println(competition.MakeReport())
+
 }

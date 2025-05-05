@@ -1,0 +1,536 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>service: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">yadro-test/cmd/service/main.go (0.0%)</option>
+				
+				<option value="file1">yadro-test/competition/competition.go (0.0%)</option>
+				
+				<option value="file2">yadro-test/config/config.go (0.0%)</option>
+				
+				<option value="file3">yadro-test/events/event.go (0.0%)</option>
+				
+				<option value="file4">yadro-test/utils/timeUtils.go (100.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "fmt"
+        "log"
+        "os"
+        competition2 "yadro-test/competition"
+        "yadro-test/config"
+        events2 "yadro-test/events"
+
+        "github.com/joho/godotenv"
+)
+
+func main() <span class="cov0" title="0">{
+        err := godotenv.Load(".env")
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("Error loading .env file")
+        }</span>
+        <span class="cov0" title="0">cfg, err := config.ParseConfig(os.Getenv("CONFIG_PATH"))
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Error parsing config.json: %s", err)
+        }</span>
+        <span class="cov0" title="0">events, err := events2.LoadEvents(os.Getenv("EVENTS_PATH"))
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Error loading events: %s", err)
+        }</span>
+
+        <span class="cov0" title="0">competition, err := competition2.CreateCompetition(cfg)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Error creating competition: %s", err)
+        }</span>
+
+        <span class="cov0" title="0">for _, event := range events </span><span class="cov0" title="0">{
+                out := competition.ProcessEvent(event)
+                fmt.Println(out)
+        }</span>
+
+        <span class="cov0" title="0">fmt.Println("`Resulting table`")
+        fmt.Println(competition.MakeReport())</span>
+
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package competition
+
+import (
+        "fmt"
+        "slices"
+        "sort"
+        "strconv"
+        "strings"
+        "time"
+        "yadro-test/config"
+        "yadro-test/events"
+        "yadro-test/utils"
+)
+
+type Competitor struct {
+        ID               int
+        Registered       bool
+        ScheduledStart   time.Time
+        ActualStart      time.Time
+        Finished         bool
+        Disqualified     bool
+        NotFinished      bool
+        Comment          string
+        LapTimes         []time.Duration
+        PenaltyTime      time.Duration
+        PenaltyStartTime time.Time
+        shotsCounter     []int
+        Hits             int
+        Shots            int
+        CurrentLap       int
+        OnFiringRange    bool
+        OnPenaltyLap     bool
+        LastEventTime    time.Time
+}
+
+type Competition struct {
+        Config      config.Config
+        Competitors map[int]*Competitor
+        Events      []events.Event
+        StartTime   time.Time
+        Delta       time.Duration
+}
+
+func CreateCompetition(config *config.Config) (*Competition, error) <span class="cov0" title="0">{
+        startTime, err := utils.ParseTime(config.Start)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">delta, err := utils.ParseDurationCfg(config.StartDelta)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return &amp;Competition{
+                Config:      *config,
+                StartTime:   startTime,
+                Delta:       delta,
+                Competitors: make(map[int]*Competitor),
+        }, nil</span>
+}
+
+func (c *Competition) ProcessEvent(event events.Event) string <span class="cov0" title="0">{
+        competitorID := event.CompetitorID
+        competitor, exist := c.Competitors[competitorID]
+        if !exist </span><span class="cov0" title="0">{
+                competitor = &amp;Competitor{
+                        ID: competitorID,
+                }
+                c.Competitors[competitorID] = competitor
+        }</span>
+
+        <span class="cov0" title="0">competitor.LastEventTime = event.Time
+
+        var output string
+
+        if competitor.Disqualified </span><span class="cov0" title="0">{
+                return fmt.Sprintf("The Competitor(%d) is disqualified", competitor.ID)
+        }</span>
+        <span class="cov0" title="0">switch event.EventID </span>{
+        case 1:<span class="cov0" title="0">
+                competitor.Registered = true
+                output = fmt.Sprintf("[%s] The competitor(%d) registered", utils.FormatTime(event.Time), competitor.ID)</span>
+
+        case 2:<span class="cov0" title="0">
+                starTime, err := utils.ParseTime(event.ExtraParams)
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Sprintf("Error occurred: %s", err.Error())
+                }</span>
+                <span class="cov0" title="0">competitor.ScheduledStart = starTime
+                output = fmt.Sprintf("[%s] The start time for the competitor(%d) was set by a draw to %s", utils.FormatTime(event.Time), competitorID, event.ExtraParams)</span>
+        case 3:<span class="cov0" title="0">
+                if event.Time.After(competitor.ScheduledStart) </span><span class="cov0" title="0">{
+                        competitor.Disqualified = true
+                        return fmt.Sprintf("The competitor(%d) is disqualified, because of the delay", competitor.ID)
+                }</span>
+                <span class="cov0" title="0">output = fmt.Sprintf("[%s] The competitor(%d) is on the start line", utils.FormatTime(event.Time), competitor.ID)</span>
+        case 4:<span class="cov0" title="0">
+                competitor.ActualStart = event.Time
+                if competitor.ActualStart.After(competitor.ScheduledStart.Add(c.Delta)) </span><span class="cov0" title="0">{
+                        competitor.Disqualified = true
+                        output = fmt.Sprintf("[%s] The competitor(%d) is disqualified", utils.FormatTime(event.Time), competitor.ID)
+                        c.Events = append(c.Events, events.Event{
+                                EventID:      32,
+                                CompetitorID: competitor.ID,
+                                Time:         event.Time,
+                        })
+                }</span> else<span class="cov0" title="0"> {
+                        output = fmt.Sprintf("[%s] The competitor(%d) has started", utils.FormatTime(event.Time), competitor.ID)
+                }</span>
+        case 5:<span class="cov0" title="0">
+                competitor.OnFiringRange = true
+                output = fmt.Sprintf("[%s] The competitor(%d) is on the firing range(%s)", utils.FormatTime(event.Time), competitorID, event.ExtraParams)</span>
+        case 6:<span class="cov0" title="0">
+                shot, err := strconv.Atoi(event.ExtraParams)
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Sprintf("Error occurred: %s", err.Error())
+                }</span>
+                <span class="cov0" title="0">competitor.shotsCounter = append(competitor.shotsCounter, shot)
+                competitor.Hits++
+                output = fmt.Sprintf("[%s] The target(%s) has been hit by competitor(%d)", utils.FormatTime(event.Time), event.ExtraParams, competitor.ID)</span>
+        case 7:<span class="cov0" title="0">
+                competitor.OnFiringRange = false
+                if len(competitor.shotsCounter) &gt; 0 </span><span class="cov0" title="0">{
+                        competitor.Shots += slices.Max(competitor.shotsCounter)
+                }</span>
+                <span class="cov0" title="0">output = fmt.Sprintf("[%s] The competitor(%d) left the firing range", utils.FormatTime(event.Time), competitorID)</span>
+
+        case 8:<span class="cov0" title="0">
+                competitor.OnPenaltyLap = true
+                competitor.PenaltyStartTime = event.Time
+                output = fmt.Sprintf("[%s] The competitor(%d) entered the penalty laps", utils.FormatTime(event.Time), competitorID)</span>
+
+        case 9:<span class="cov0" title="0">
+                competitor.OnPenaltyLap = false
+                penaltyEnd := event.Time
+                competitor.PenaltyTime += penaltyEnd.Sub(competitor.PenaltyStartTime)
+                output = fmt.Sprintf("[%s] The competitor(%d) left the penalty laps", utils.FormatTime(event.Time), competitorID)</span>
+        case 10:<span class="cov0" title="0">
+                competitor.CurrentLap++
+                if competitor.CurrentLap == 1 </span><span class="cov0" title="0">{
+                        lapTime := event.Time.Sub(competitor.ActualStart)
+                        competitor.LapTimes = append(competitor.LapTimes, lapTime)
+                }</span> else<span class="cov0" title="0"> if competitor.CurrentLap &lt;= c.Config.Laps </span><span class="cov0" title="0">{
+                        lapTime := event.Time.Sub(competitor.ActualStart)
+                        competitor.LapTimes = append(competitor.LapTimes, lapTime)
+                }</span>
+
+                <span class="cov0" title="0">if competitor.CurrentLap == c.Config.Laps </span><span class="cov0" title="0">{
+                        competitor.Finished = true
+                        c.Events = append(c.Events, events.Event{
+                                EventID:      33,
+                                CompetitorID: competitor.ID,
+                                Time:         event.Time,
+                        })
+                }</span>
+
+        case 11:<span class="cov0" title="0">
+                competitor.NotFinished = true
+                competitor.Comment = event.ExtraParams
+                output = fmt.Sprintf("[%s] The competitor(%d) can`t continue: %s", utils.FormatTime(event.Time), competitor.ID, event.ExtraParams)</span>
+        }
+
+        <span class="cov0" title="0">return output</span>
+}
+
+func (c *Competition) MakeReport() string <span class="cov0" title="0">{
+        var b strings.Builder
+
+        competitors := make([]*Competitor, 0, len(c.Competitors))
+        for _, competitor := range c.Competitors </span><span class="cov0" title="0">{
+                competitors = append(competitors, competitor)
+        }</span>
+
+        <span class="cov0" title="0">sort.Slice(competitors, func(i, j int) bool </span><span class="cov0" title="0">{
+                if competitors[i].Disqualified </span><span class="cov0" title="0">{
+                        return false
+                }</span>
+                <span class="cov0" title="0">if competitors[j].Disqualified </span><span class="cov0" title="0">{
+                        return true
+                }</span>
+                <span class="cov0" title="0">if competitors[i].NotFinished &amp;&amp; !competitors[j].NotFinished </span><span class="cov0" title="0">{
+                        return false
+                }</span>
+                <span class="cov0" title="0">if !competitors[i].Finished &amp;&amp; competitors[j].Finished </span><span class="cov0" title="0">{
+                        return true
+                }</span>
+                <span class="cov0" title="0">compTotalTime1 := competitors[i].LastEventTime.Sub(competitors[i].ActualStart)
+                compTotalTime2 := competitors[j].LastEventTime.Sub(competitors[j].ActualStart)
+                return compTotalTime1 &lt; compTotalTime2</span>
+        })
+
+        <span class="cov0" title="0">for _, competitor := range competitors </span><span class="cov0" title="0">{
+                if competitor.Disqualified </span><span class="cov0" title="0">{
+                        b.WriteString(fmt.Sprintf("[NotStarted] %d ", competitor.ID))
+                }</span> else<span class="cov0" title="0"> if competitor.NotFinished </span><span class="cov0" title="0">{
+                        b.WriteString(fmt.Sprintf("[NotFinished] %d ", competitor.ID))
+                }</span> else<span class="cov0" title="0"> {
+                        totalTime := competitor.LastEventTime.Sub(competitor.ActualStart)
+                        b.WriteString(fmt.Sprintf("[%s] %d ", utils.FormatDuration(totalTime), competitor.ID))
+                }</span>
+
+                <span class="cov0" title="0">b.WriteString(fmt.Sprintf("[{"))
+                for i, lapTime := range competitor.LapTimes </span><span class="cov0" title="0">{
+                        if i &gt; 0 </span><span class="cov0" title="0">{
+                                b.WriteString(", {")
+                        }</span>
+                        <span class="cov0" title="0">if i &lt; c.Config.Laps </span><span class="cov0" title="0">{
+                                b.WriteString(utils.FormatDuration(lapTime))
+                                b.WriteString(fmt.Sprintf(", %.3f}", calculateSpeed(c.Config.LapLen, lapTime)))
+                        }</span> else<span class="cov0" title="0"> {
+                                b.WriteString(",")
+                        }</span>
+                }
+                <span class="cov0" title="0">b.WriteString("] ")
+                if competitor.PenaltyTime &gt; 0 </span><span class="cov0" title="0">{
+                        b.WriteString("{" + utils.FormatDuration(competitor.PenaltyTime))
+                        b.WriteString(fmt.Sprintf(", %.3f} ", calculateSpeed(c.Config.PenaltyLen, competitor.PenaltyTime)))
+                }</span>
+
+                <span class="cov0" title="0">b.WriteString(fmt.Sprintf("%d/%d\n", competitor.Hits, competitor.Shots))</span>
+        }
+
+        <span class="cov0" title="0">return b.String()</span>
+}
+
+func calculateSpeed(distance int, duration time.Duration) float64 <span class="cov0" title="0">{
+        if distance == 0 || duration == 0 </span><span class="cov0" title="0">{
+                return 0
+        }</span>
+
+        <span class="cov0" title="0">return float64(distance) / (duration.Seconds())</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package config
+
+import (
+        "encoding/json"
+        "os"
+)
+
+type Config struct {
+        Laps        int    `json:"laps"`
+        LapLen      int    `json:"lapLen"`
+        PenaltyLen  int    `json:"penaltyLen"`
+        FiringLines int    `json:"firingLines"`
+        Start       string `json:"start"`
+        StartDelta  string `json:"startDelta"`
+}
+
+func ParseConfig(path string) (*Config, error) <span class="cov0" title="0">{
+        var Config Config
+
+        data, err := os.ReadFile(path)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">err = json.Unmarshal(data, &amp;Config)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return &amp;Config, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package events
+
+import (
+        "fmt"
+        "os"
+        "strings"
+        "time"
+        "yadro-test/utils"
+)
+
+type Event struct {
+        Time         time.Time `json:"time"`
+        EventID      int       `json:"eventID"`
+        CompetitorID int       `json:"competitorID"`
+        ExtraParams  string    `json:"extraParams"`
+}
+
+func LoadEvents(filePath string) ([]Event, error) <span class="cov0" title="0">{
+        data, err := os.ReadFile(filePath)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">lines := strings.Split(string(data), "\n")
+        var evnts []Event
+        for _, line := range lines </span><span class="cov0" title="0">{
+                line = strings.TrimSpace(line)
+                if line == "" </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+                <span class="cov0" title="0">event, err := ParseEvent(line)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                <span class="cov0" title="0">evnts = append(evnts, event)</span>
+        }
+        <span class="cov0" title="0">return evnts, nil</span>
+}
+
+func ParseEvent(line string) (Event, error) <span class="cov0" title="0">{
+        var e Event
+
+        parts := strings.Split(line, " ")
+        if len(parts) &lt; 3 </span><span class="cov0" title="0">{
+                return e, fmt.Errorf("invalid events format")
+        }</span>
+
+        <span class="cov0" title="0">timeStr := strings.Trim(parts[0], "[]")
+        t, err := utils.ParseTime(timeStr)
+        if err != nil </span><span class="cov0" title="0">{
+                return e, err
+        }</span>
+        <span class="cov0" title="0">e.Time = t
+
+        _, err = fmt.Sscanf(parts[1], "%d", &amp;e.EventID)
+        if err != nil </span><span class="cov0" title="0">{
+                return e, err
+        }</span>
+
+        <span class="cov0" title="0">_, err = fmt.Sscanf(parts[2], "%d", &amp;e.CompetitorID)
+        if err != nil </span><span class="cov0" title="0">{
+                return e, err
+        }</span>
+
+        <span class="cov0" title="0">if len(parts) &gt; 3 </span><span class="cov0" title="0">{
+                e.ExtraParams = strings.Join(parts[3:], " ")
+        }</span>
+
+        <span class="cov0" title="0">return e, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package utils
+
+import (
+        "fmt"
+        "strconv"
+        "strings"
+        "time"
+)
+
+func FormatDuration(d time.Duration) string <span class="cov8" title="1">{
+        hours := int(d.Hours())
+        minutes := int(d.Minutes()) % 60
+        seconds := int(d.Seconds()) % 60
+        ms := int(d.Milliseconds()) % 1000
+        return fmt.Sprintf("%02d:%02d:%02d:%03d", hours, minutes, seconds, ms)
+}</span>
+
+func ParseTime(timeStr string) (time.Time, error) <span class="cov8" title="1">{
+        return time.Parse("15:04:05.000", timeStr)
+}</span>
+
+func FormatTime(t time.Time) string <span class="cov8" title="1">{
+        return t.Format("15:04:05.000")
+}</span>
+
+func ParseDurationCfg(durStr string) (time.Duration, error) <span class="cov8" title="1">{
+        parts := strings.Split(durStr, ":")
+        if len(parts) != 3 </span><span class="cov8" title="1">{
+                return 0, fmt.Errorf("invalid duration format: %s", durStr)
+        }</span>
+        <span class="cov8" title="1">hours, err := strconv.Atoi(parts[0])
+        if err != nil </span><span class="cov8" title="1">{
+                return 0, err
+        }</span>
+        <span class="cov8" title="1">minutes, err := strconv.Atoi(parts[1])
+        if err != nil </span><span class="cov8" title="1">{
+                return 0, err
+        }</span>
+        <span class="cov8" title="1">seconds, err := strconv.Atoi(parts[2])
+        if err != nil </span><span class="cov8" title="1">{
+                return 0, err
+        }</span>
+        <span class="cov8" title="1">return time.Duration(hours)*time.Hour + time.Duration(minutes)*time.Minute + time.Second*time.Duration(seconds), nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
