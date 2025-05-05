@@ -117,6 +117,10 @@ func (c *Competition) ProcessEvent(event Event) string {
 		competitor.ScheduledStart = starTime
 		output = fmt.Sprintf("[%s] The start time for the competitor(%d) was set by a draw to %s", utils.FormatTime(event.Time), competitorID, event.ExtraParams)
 	case 3:
+		if event.Time.After(competitor.ScheduledStart) {
+			competitor.Disqualified = true
+			return fmt.Sprintf("The competitor(%d) is disqualified, because of the delay", competitor.ID)
+		}
 		output = fmt.Sprintf("[%s] The competitor(%d) is on the start line", utils.FormatTime(event.Time), competitor.ID)
 	case 4:
 		competitor.ActualStart = event.Time
@@ -208,8 +212,9 @@ func (c *Competition) MakeReport() string {
 		if !competitors[i].Finished && competitors[j].Finished {
 			return true
 		}
-
-		return competitors[i].LastEventTime.Before(competitors[j].LastEventTime)
+		compTotalTime1 := competitors[i].LastEventTime.Sub(competitors[i].ActualStart)
+		compTotalTime2 := competitors[j].LastEventTime.Sub(competitors[j].ActualStart)
+		return compTotalTime1 < compTotalTime2
 	})
 
 	for _, competitor := range competitors {
@@ -225,16 +230,16 @@ func (c *Competition) MakeReport() string {
 		b.WriteString(fmt.Sprintf("[{"))
 		for i, lapTime := range competitor.LapTimes {
 			if i > 0 {
-				b.WriteString(", ")
+				b.WriteString(", {")
 			}
 			if i < c.Config.Laps {
 				b.WriteString(utils.FormatDuration(lapTime))
-				b.WriteString(fmt.Sprintf(", %.3f ", calculateSpeed(c.Config.LapLen, lapTime)))
+				b.WriteString(fmt.Sprintf(", %.3f}", calculateSpeed(c.Config.LapLen, lapTime)))
 			} else {
 				b.WriteString(",")
 			}
 		}
-		b.WriteString("} ")
+		b.WriteString("] ")
 		if competitor.PenaltyTime > 0 {
 			b.WriteString("{" + utils.FormatDuration(competitor.PenaltyTime))
 			b.WriteString(fmt.Sprintf(", %.3f} ", calculateSpeed(c.Config.PenaltyLen, competitor.PenaltyTime)))
