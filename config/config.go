@@ -29,22 +29,24 @@ type Event struct {
 }
 
 type Competitor struct {
-	ID             int
-	Registered     bool
-	ScheduledStart time.Time
-	ActualStart    time.Time
-	Finished       bool
-	Disqualified   bool
-	NotFinished    bool
-	Comment        string
-	LapTimes       []time.Duration
-	PenaltyTime    time.Duration
-	Hits           int
-	Shots          int
-	CurrentLap     int
-	OnFiringRange  bool
-	OnPenaltyLap   bool
-	LastEventTime  time.Time
+	ID               int
+	Registered       bool
+	ScheduledStart   time.Time
+	ActualStart      time.Time
+	Finished         bool
+	Disqualified     bool
+	NotFinished      bool
+	Comment          string
+	LapTimes         []time.Duration
+	PenaltyTime      time.Duration
+	PenaltyStartTime time.Time
+	shotsCounter     []int
+	Hits             int
+	Shots            int
+	CurrentLap       int
+	OnFiringRange    bool
+	OnPenaltyLap     bool
+	LastEventTime    time.Time
 }
 
 type Competition struct {
@@ -60,7 +62,7 @@ func CreateCompetition(config *Config) (*Competition, error) {
 	if err != nil {
 		return nil, err
 	}
-	delta, err := time.ParseDuration(config.StartDelta)
+	delta, err := utils.ParseDurationCfg(config.StartDelta)
 	if err != nil {
 		return nil, err
 	}
@@ -87,11 +89,6 @@ func ParseConfig(path string) (*Config, error) {
 	}
 	return &Config, nil
 }
-
-var (
-	penaltyStart time.Time
-	shotsCounter []int
-)
 
 func (c *Competition) ProcessEvent(event Event) string {
 	competitorID := event.CompetitorID
@@ -142,23 +139,25 @@ func (c *Competition) ProcessEvent(event Event) string {
 		if err != nil {
 			return fmt.Sprintf("Error occurred: %s", err.Error())
 		}
-		shotsCounter = append(shotsCounter, shot)
+		competitor.shotsCounter = append(competitor.shotsCounter, shot)
 		competitor.Hits++
 		output = fmt.Sprintf("[%s] The target(%s) has been hit by competitor(%d)", utils.FormatTime(event.Time), event.ExtraParams, competitor.ID)
 	case 7:
 		competitor.OnFiringRange = false
-		competitor.Shots += slices.Max(shotsCounter)
+		if len(competitor.shotsCounter) > 0 {
+			competitor.Shots += slices.Max(competitor.shotsCounter)
+		}
 		output = fmt.Sprintf("[%s] The competitor(%d) left the firing range", utils.FormatTime(event.Time), competitorID)
 
 	case 8:
 		competitor.OnPenaltyLap = true
-		penaltyStart = event.Time
+		competitor.PenaltyStartTime = event.Time
 		output = fmt.Sprintf("[%s] The competitor(%d) entered the penalty laps", utils.FormatTime(event.Time), competitorID)
 
 	case 9:
 		competitor.OnPenaltyLap = false
 		penaltyEnd := event.Time
-		competitor.PenaltyTime = penaltyEnd.Sub(penaltyStart)
+		competitor.PenaltyTime += penaltyEnd.Sub(competitor.PenaltyStartTime)
 		output = fmt.Sprintf("[%s] The competitor(%d) left the penalty laps", utils.FormatTime(event.Time), competitorID)
 	case 10:
 		competitor.CurrentLap++
@@ -235,9 +234,9 @@ func (c *Competition) MakeReport() string {
 				b.WriteString(",")
 			}
 		}
-		b.WriteString("} {")
+		b.WriteString("} ")
 		if competitor.PenaltyTime > 0 {
-			b.WriteString(utils.FormatDuration(competitor.PenaltyTime))
+			b.WriteString("{" + utils.FormatDuration(competitor.PenaltyTime))
 			b.WriteString(fmt.Sprintf(", %.3f} ", calculateSpeed(c.Config.PenaltyLen, competitor.PenaltyTime)))
 		}
 
@@ -252,5 +251,5 @@ func calculateSpeed(distance int, duration time.Duration) float64 {
 		return 0
 	}
 
-	return float64(distance) / float64(duration)
+	return float64(distance) / (duration.Seconds())
 }

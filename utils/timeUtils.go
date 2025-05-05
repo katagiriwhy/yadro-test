@@ -23,13 +23,24 @@ func FormatTime(t time.Time) string {
 	return t.Format("15:04:05.000")
 }
 
-func parseMilliseconds(ms string) (int, error) {
-	var val int
-	_, err := fmt.Sscanf(ms, "%d", &val)
+func ParseDurationCfg(durStr string) (time.Duration, error) {
+	parts := strings.Split(durStr, ":")
+	if len(parts) != 3 {
+		return 0, fmt.Errorf("invalid duration format: %s", durStr)
+	}
+	hours, err := strconv.Atoi(parts[0])
 	if err != nil {
 		return 0, err
 	}
-	return val, nil
+	minutes, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, err
+	}
+	seconds, err := strconv.Atoi(parts[2])
+	if err != nil {
+		return 0, err
+	}
+	return time.Duration(hours)*time.Hour + time.Duration(minutes)*time.Minute + time.Second*time.Duration(seconds), nil
 }
 
 func ParseDuration(durStr string) (time.Duration, error) {
