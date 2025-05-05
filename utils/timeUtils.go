@@ -9,9 +9,9 @@ import (
 
 func FormatDuration(d time.Duration) string {
 	hours := int(d.Hours())
-	minutes := int(d.Minutes())
-	seconds := int(d.Seconds())
-	ms := int(d.Milliseconds())
+	minutes := int(d.Minutes()) % 60
+	seconds := int(d.Seconds()) % 60
+	ms := int(d.Milliseconds()) % 1000
 	return fmt.Sprintf("%02d:%02d:%02d:%03d", hours, minutes, seconds, ms)
 }
 

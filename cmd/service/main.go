@@ -3,16 +3,23 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"yadro-test/config"
 	"yadro-test/internal"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	cfg, err := config.ParseConfig("files/cfg.json")
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	cfg, err := config.ParseConfig(os.Getenv("CONFIG_PATH"))
 	if err != nil {
 		log.Fatalf("Error parsing config.json: %s", err)
 	}
-	events, err := internal.LoadEvents("files/events")
+	events, err := internal.LoadEvents(os.Getenv("EVENTS_PATH"))
 	if err != nil {
 		log.Fatalf("Error loading events: %s", err)
 	}
