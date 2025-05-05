@@ -59,9 +59,9 @@
 				
 				<option value="file1">yadro-test/competition/competition.go (0.0%)</option>
 				
-				<option value="file2">yadro-test/config/config.go (0.0%)</option>
+				<option value="file2">yadro-test/config/config.go (75.0%)</option>
 				
-				<option value="file3">yadro-test/events/event.go (0.0%)</option>
+				<option value="file3">yadro-test/events/event.go (78.1%)</option>
 				
 				<option value="file4">yadro-test/utils/timeUtils.go (100.0%)</option>
 				
@@ -370,7 +370,7 @@ type Config struct {
         StartDelta  string `json:"startDelta"`
 }
 
-func ParseConfig(path string) (*Config, error) <span class="cov0" title="0">{
+func ParseConfig(path string) (*Config, error) <span class="cov8" title="1">{
         var Config Config
 
         data, err := os.ReadFile(path)
@@ -378,11 +378,11 @@ func ParseConfig(path string) (*Config, error) <span class="cov0" title="0">{
                 return nil, err
         }</span>
 
-        <span class="cov0" title="0">err = json.Unmarshal(data, &amp;Config)
+        <span class="cov8" title="1">err = json.Unmarshal(data, &amp;Config)
         if err != nil </span><span class="cov0" title="0">{
                 return nil, err
         }</span>
-        <span class="cov0" title="0">return &amp;Config, nil</span>
+        <span class="cov8" title="1">return &amp;Config, nil</span>
 }
 </pre>
 		
@@ -403,29 +403,29 @@ type Event struct {
         ExtraParams  string    `json:"extraParams"`
 }
 
-func LoadEvents(filePath string) ([]Event, error) <span class="cov0" title="0">{
+func LoadEvents(filePath string) ([]Event, error) <span class="cov8" title="1">{
         data, err := os.ReadFile(filePath)
         if err != nil </span><span class="cov0" title="0">{
                 return nil, err
         }</span>
 
-        <span class="cov0" title="0">lines := strings.Split(string(data), "\n")
+        <span class="cov8" title="1">lines := strings.Split(string(data), "\n")
         var evnts []Event
-        for _, line := range lines </span><span class="cov0" title="0">{
+        for _, line := range lines </span><span class="cov8" title="1">{
                 line = strings.TrimSpace(line)
                 if line == "" </span><span class="cov0" title="0">{
                         continue</span>
                 }
-                <span class="cov0" title="0">event, err := ParseEvent(line)
+                <span class="cov8" title="1">event, err := ParseEvent(line)
                 if err != nil </span><span class="cov0" title="0">{
                         return nil, err
                 }</span>
-                <span class="cov0" title="0">evnts = append(evnts, event)</span>
+                <span class="cov8" title="1">evnts = append(evnts, event)</span>
         }
-        <span class="cov0" title="0">return evnts, nil</span>
+        <span class="cov8" title="1">return evnts, nil</span>
 }
 
-func ParseEvent(line string) (Event, error) <span class="cov0" title="0">{
+func ParseEvent(line string) (Event, error) <span class="cov8" title="1">{
         var e Event
 
         parts := strings.Split(line, " ")
@@ -433,28 +433,28 @@ func ParseEvent(line string) (Event, error) <span class="cov0" title="0">{
                 return e, fmt.Errorf("invalid events format")
         }</span>
 
-        <span class="cov0" title="0">timeStr := strings.Trim(parts[0], "[]")
+        <span class="cov8" title="1">timeStr := strings.Trim(parts[0], "[]")
         t, err := utils.ParseTime(timeStr)
         if err != nil </span><span class="cov0" title="0">{
                 return e, err
         }</span>
-        <span class="cov0" title="0">e.Time = t
+        <span class="cov8" title="1">e.Time = t
 
         _, err = fmt.Sscanf(parts[1], "%d", &amp;e.EventID)
         if err != nil </span><span class="cov0" title="0">{
                 return e, err
         }</span>
 
-        <span class="cov0" title="0">_, err = fmt.Sscanf(parts[2], "%d", &amp;e.CompetitorID)
+        <span class="cov8" title="1">_, err = fmt.Sscanf(parts[2], "%d", &amp;e.CompetitorID)
         if err != nil </span><span class="cov0" title="0">{
                 return e, err
         }</span>
 
-        <span class="cov0" title="0">if len(parts) &gt; 3 </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if len(parts) &gt; 3 </span><span class="cov8" title="1">{
                 e.ExtraParams = strings.Join(parts[3:], " ")
         }</span>
 
-        <span class="cov0" title="0">return e, nil</span>
+        <span class="cov8" title="1">return e, nil</span>
 }
 </pre>
 		
