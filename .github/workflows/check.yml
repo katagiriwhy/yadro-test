@@ -1,0 +1,15 @@
+name: check
+on: [push]
+jobs:
+  prep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configuration of Golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.23.3'
+      - name: Test app
+        run: go run main.go
+        working-directory: yadro-test/cmd/service
+
